@@ -14,7 +14,7 @@ def run_test():
 
         print("\n=== ТЕСТ ВВОДА ДАННЫХ ===")
 
-        # Координаты полей ввода (подберите свои значения)
+        # Координаты полей ввода
         fields = [
             (rect.left + 230, rect.top + 70),  # Магнитное склонение
             (rect.left + 230, rect.top + 100),  # Среднее сближение
@@ -36,7 +36,7 @@ def run_test():
 
         print("\n=== ТЕСТ РАСЧЕТА ===")
 
-        # Координаты кнопки (подберите свои)
+        # Координаты кнопки
         button_x = rect.left + 150
         button_y = rect.top + 300
         pyautogui.click(button_x, button_y)
