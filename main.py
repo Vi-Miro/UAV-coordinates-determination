@@ -1,134 +1,137 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
 import math
 
-'''ввод градусов магнитного склонения, среднего сближения меридиан, 
-   а также своих координат взлета'''
 
-print("Режим - Предварительная подготовка: ")
-mag = input("Введите градусы магнитного склонения: ")
-mid = input("Введите градусы среднего сближения: ")
-print("\n")
+class DroneCalculatorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Расчет координат объекта с БПЛА")
 
-print("Режим - Предполетная подготовка: ")
-self_x = float(input("Введите свои координаты (Х): "))
-self_y = float(input("Введите свои координаты (У): "))
-print("\n")
+        # Инициализация переменных
+        self.declination = tk.DoubleVar()
+        self.convergence = tk.DoubleVar()
+        self.self_x = tk.DoubleVar()
+        self.self_y = tk.DoubleVar()
 
-''' функция для определения дистанции до объекта. 
-    Входные данные: угол наклона камеры, данные дальномера'''
+        self.camera_angle = tk.DoubleVar()
+        self.lazer_distance = tk.DoubleVar()
+        self.magnetic_course = tk.DoubleVar()
+
+        # Создание вкладок
+        self.notebook = ttk.Notebook(root)
+        self.tab_prepare = ttk.Frame(self.notebook)
+        self.tab_flight = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_prepare, text="Подготовка")
+        self.notebook.add(self.tab_flight, text="Полет")
+        self.notebook.pack(expand=True, fill="both")
+
+        # Вкладка "Подготовка"
+        self.setup_prepare_tab()
+
+        # Вкладка "Полет"
+        self.setup_flight_tab()
+
+    def setup_prepare_tab(self):
+        # Магнитное склонение
+        ttk.Label(self.tab_prepare, text="Магнитное склонение:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_prepare, textvariable=self.declination, width=10).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(self.tab_prepare, text="град.").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+
+        # Среднее сближение
+        ttk.Label(self.tab_prepare, text="Среднее сближение:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_prepare, textvariable=self.convergence, width=10).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(self.tab_prepare, text="град.").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+
+        # Координаты взлета
+        ttk.Label(self.tab_prepare, text="Координаты взлета (X):").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_prepare, textvariable=self.self_x, width=10).grid(row=2, column=1, padx=5, pady=5)
+
+        ttk.Label(self.tab_prepare, text="Координаты взлета (Y):").grid(row=3, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_prepare, textvariable=self.self_y, width=10).grid(row=3, column=1, padx=5, pady=5)
+
+    def setup_flight_tab(self):
+        # Угол наклона камеры
+        ttk.Label(self.tab_flight, text="Угол наклона камеры:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_flight, textvariable=self.camera_angle, width=10).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(self.tab_flight, text="град.").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+
+        # Показания дальномера
+        ttk.Label(self.tab_flight, text="Показания дальномера:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_flight, textvariable=self.lazer_distance, width=10).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(self.tab_flight, text="м").grid(row=1, column=2, padx=5, pady=5, sticky="w")
+
+        # Магнитный курс
+        ttk.Label(self.tab_flight, text="Магнитный курс:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        ttk.Entry(self.tab_flight, textvariable=self.magnetic_course, width=10).grid(row=2, column=1, padx=5, pady=5)
+        ttk.Label(self.tab_flight, text="град.").grid(row=2, column=2, padx=5, pady=5, sticky="w")
+
+        # Кнопка расчета
+        ttk.Button(self.tab_flight, text="Рассчитать координаты", command=self.calculate).grid(row=3, column=0,
+                                                                                               columnspan=3, pady=10)
+
+        # Вывод результата
+        self.result_label = ttk.Label(self.tab_flight, text="Координаты объекта: (X, Y) = ")
+        self.result_label.grid(row=4, column=0, columnspan=3, pady=5)
+
+    def dms_to_dd(self, degrees, minutes):
+        return degrees + minutes / 60
+
+    def get_distance(self, camera_angle, lazer_distance):
+        return lazer_distance * math.cos(math.radians(camera_angle))
+
+    def get_map_angle(self, magnetic_course, declination, convergence):
+        return magnetic_course + declination + convergence
+
+    def get_obj_coordinates(self, distance, map_angle, self_x, self_y):
+        if 0 <= map_angle <= 90:
+            delta_x = distance * math.cos(math.radians(map_angle))
+            delta_y = distance * math.sin(math.radians(map_angle))
+            obj_x = self_x + delta_x
+            obj_y = self_y + delta_y
+        elif 90 < map_angle <= 180:
+            map_angle = 180 - map_angle
+            delta_x = distance * math.cos(math.radians(map_angle))
+            delta_y = distance * math.sin(math.radians(map_angle))
+            obj_x = self_x - delta_x
+            obj_y = self_y + delta_y
+        elif 180 < map_angle <= 270:
+            map_angle = 270 - map_angle
+            delta_x = distance * math.sin(math.radians(map_angle))
+            delta_y = distance * math.cos(math.radians(map_angle))
+            obj_x = self_x - delta_x
+            obj_y = self_y - delta_y
+        elif 270 < map_angle <= 360:
+            map_angle = 360 - map_angle
+            delta_x = distance * math.cos(math.radians(map_angle))
+            delta_y = distance * math.sin(math.radians(map_angle))
+            obj_x = self_x + delta_x
+            obj_y = self_y - delta_y
+        return int(obj_x), int(obj_y)
+
+    def calculate(self):
+        try:
+            # Получаем данные
+            camera_angle = self.camera_angle.get()
+            lazer_distance = self.lazer_distance.get()
+            magnetic_course = self.magnetic_course.get()
+            declination = self.declination.get()
+            convergence = self.convergence.get()
+            self_x = self.self_x.get()
+            self_y = self.self_y.get()
+
+            # Расчет
+            distance = self.get_distance(camera_angle, lazer_distance)
+            map_angle = self.get_map_angle(magnetic_course, declination, convergence)
+            obj_x, obj_y = self.get_obj_coordinates(distance, map_angle, self_x, self_y)
+
+            # Вывод
+            self.result_label.config(text=f"Координаты объекта: (X, Y) = ({obj_x}, {obj_y})")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Проверьте введенные данные!\nОшибка: {e}")
 
 
-def get_distance(camera_angle, lazer_distance):
-    distance = lazer_distance * math.cos(math.radians(camera_angle))
-    return distance
-
-
-'''функция перевода угла из градусов, минут, координат 
-    в десятичный формат'''
-
-
-def dms_to_dd(x):
-    x = x.split(',')
-    #print(x)
-    return int(x[0]) + int(x[1]) / 60
-
-
-'''преобразование магнитного склонения и 
-   среднего сближения в десятичный формат'''
-
-declination = dms_to_dd(mag)
-# print("Магнитное склонение (десятичное): ", declination)
-
-convergence = dms_to_dd(mid)
-# print("Среднее сближение (десятичное): ", convergence, "\n")
-
-
-'''функция определения угла направления относительно линии сетки.
-    Входные данные: магнитный курс, магнитное склонение, среденее сближение'''
-
-
-def get_map_angle(magnetic_course, declination, convergence):
-    map_angle = magnetic_course + declination + convergence
-    return map_angle
-
-
-'''функция определения координат объекта в зависимости от угла направления.
-    Входные данные: расстояние до объекта, угол направления, собсьвенные координаты'''
-
-
-def get_obj_coordinates(distance, map_angle, self_x, self_y):
-    if 0 <= map_angle <= 90:
-        delta_x = distance * math.cos(math.radians(map_angle))
-        delta_y = distance * math.sin(math.radians(map_angle))
-
-        obj_x = self_x + delta_x
-        obj_y = self_y + delta_y
-
-    elif 90 < map_angle <= 180:
-        map_angle = 180 - map_angle
-
-        delta_x = distance * math.cos(math.radians(map_angle))
-        delta_y = distance * math.sin(math.radians(map_angle))
-
-        obj_x = self_x - delta_x
-        obj_y = self_y + delta_y
-
-    elif 180 < map_angle <= 270:
-        map_angle = 270 - map_angle
-
-        delta_x = distance * math.sin(math.radians(map_angle))
-        delta_y = distance * math.cos(math.radians(map_angle))
-
-        obj_x = self_x - delta_x
-        obj_y = self_y - delta_y
-
-    elif 270 < map_angle <= 360:
-        map_angle = 360 - map_angle
-
-        delta_x = distance * math.cos(math.radians(map_angle))
-        delta_y = distance * math.sin(math.radians(map_angle))
-
-        obj_x = self_x + delta_x
-        obj_y = self_y - delta_y
-
-    return int(obj_x), int(obj_y)
-
-
-'''функция внесения данных с дрона и получения координат объекта'''
-
-
-def flight_mode(declination, convergence, self_x, self_y):
-    print("Режим - Полет: ")
-    camera_angle = float(input("Введите угол наклона камеры: "))
-    lazer_distance = float(input("Введите показания дальномера: "))
-    magnetic_course = float(input("Введите магнитный курс: "))
-
-    distance = get_distance(camera_angle, lazer_distance)
-    print("Расстояние до объекта: ", int(distance))
-
-    map_angle = get_map_angle(magnetic_course, declination, convergence)
-    # print("Угол направления: ", map_angle, "\n")
-    print("\n")
-
-    obj_coordinates = get_obj_coordinates(distance, map_angle, self_x, self_y)
-    print("Координаты объекта (Х, У): ", obj_coordinates, "\n")
-
-
-if __name__ == '__main__':
-    flight_mode(declination, convergence, self_x, self_y)
-
-    answer = input("Хотите продолжить? (y - да, n - нет): ")
-
-    while answer != 'n':
-        pre_answer = input("Изменить координаты взлета? (y - да, n - нет): ")
-        print("\n")
-
-        if pre_answer == 'y':
-            print("Режим - Изменение координат взлета: ")
-            self_x = float(input("Введите свои координаты (Х): "))
-            self_y = float(input("Введите свои координаты (У): "))
-            print("\n")
-
-        flight_mode(declination, convergence, self_x, self_y)
-
-        answer = input("Хотите продолжить? (y - да, n - нет): ")
-        print("\n")
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = DroneCalculatorApp(root)
+    root.mainloop()
